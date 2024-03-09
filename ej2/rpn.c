@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 void procesar_operaciones(FILE *);
 
@@ -27,11 +28,14 @@ int main(int argc, char** argv) {
 }
 
 int leer_numero_u_operacion(FILE* f, double *num, char *operacion) {
-    if(fscanf(f,"%lf",num) ==  1) {
+    if(fscanf(f,"%31s",operacion) == 1) {
+        errno = 0;
+        *num = strtod(operacion,NULL);
+        fprintf(stdout,"%lf",*num);
+        if(errno != 0) {
+            return 2;
+        }
         return 1;
-    }
-    else if(fscanf(f,"%31s",operacion) == 1) {
-        return 2;
     }
     return 0;
 }
