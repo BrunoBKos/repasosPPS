@@ -1,0 +1,48 @@
+ALU Unidad Aritmético-Lógica
+MAC Media Access Control
+BSS Basic Service Set
+LAN Local Area Network
+WAN Wide Area Network
+WWW World Wide Web
+MTU Unidad Máxima de Transferencia/Máquina de Turing Universal
+ILP Paralelismo a nivel de instrucción
+IDE Entorno de desarrollo integrado
+WAR Write after Read
+WAW Write after Write
+RAW Read after Write
+EDL Espacio de Direcciones Lógico
+EDF Espacio de Direcciones Físico
+RTS Return to Subroutine/Request to Send
+CTS Clear to Send
+IFS Inter Frame Spacing
+OOF Out of Order Fetch
+LRU Least Recently Used
+DMA Acceso Directo a Memoria
+MCM Mínimo Común Múltiplo
+MCD Máximo Común Divisor
+HDD Hard Disk Drive
+SSD Solid State Drive
+SRI Servicio de Reconocimiento de Interrupción
+RTI Rutina de Tratamiento de Interrupción
+RAM Random Access Memory
+ROM Read Only Memory
+DVD Digital Versatile Disc​
+CPU Unidad Central de Procesamiento
+GPU Unidad de Procesamiento Gráfico
+PPP Protocolo Punto a Punto
+OOP Programación Orientada a Objetps
+ARP Address Resolution Protocol
+NAT Network Address Translation
+FTP Protocolo de Transferencia de Ficheros
+UDP User Datagram Protocol
+TCP Transmission Control Protocol
+DNS Domain Name System
+ACM Association for Computing Machinery
+PPS Programación para Sistemas
+AED Algoritmos y Estructuras de Datos
+PCM Modulación por impulso codificado
+SQL Structured Query Language
+CLI Interfaz de línea de comandos
+CMD Command Prompt
+DCF Función de Coordinación Distribuida
+NAV Network Allocation Vector
