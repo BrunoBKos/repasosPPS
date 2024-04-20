@@ -1,0 +1,48 @@
+ACM Association for Computing Machinery
+AED Algoritmos y Estructuras de Datos
+ALU Unidad Aritmético-Lógica
+ARP Address Resolution Protocol
+BSS Basic Service Set
+CLI Interfaz de línea de comandos
+CMD Command Prompt
+CPU Unidad Central de Procesamiento
+CTS Clear to Send
+DCF Función de Coordinación Distribuida
+DMA Acceso Directo a Memoria
+DNS Domain Name System
+DVD Digital Versatile Disc​
+EDF Espacio de Direcciones Físico
+EDL Espacio de Direcciones Lógico
+FTP Protocolo de Transferencia de Ficheros
+GPU Unidad de Procesamiento Gráfico
+HDD Hard Disk Drive
+IDE Entorno de desarrollo integrado
+IFS Inter Frame Spacing
+ILP Paralelismo a nivel de instrucción
+LAN Local Area Network
+LRU Least Recently Used
+MAC Media Access Control
+MCD Máximo Común Divisor
+MCM Mínimo Común Múltiplo
+MTU Unidad Máxima de Transferencia/Máquina de Turing Universal
+NAT Network Address Translation
+NAV Network Allocation Vector
+OOF Out of Order Fetch
+OOP Programación Orientada a Objetps
+PCM Modulación por impulso codificado
+PPP Protocolo Punto a Punto
+PPS Programación para Sistemas
+RAM Random Access Memory
+RAW Read after Write
+ROM Read Only Memory
+RTI Rutina de Tratamiento de Interrupción
+RTS Return to Subroutine/Request to Send
+SQL Structured Query Language
+SRI Servicio de Reconocimiento de Interrupción
+SSD Solid State Drive
+TCP Transmission Control Protocol
+UDP User Datagram Protocol
+WAN Wide Area Network
+WAR Write after Read
+WAW Write after Write
+WWW World Wide Web
