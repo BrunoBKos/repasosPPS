@@ -46,3 +46,4 @@ CLI Interfaz de línea de comandos
 CMD Command Prompt
 DCF Función de Coordinación Distribuida
 NAV Network Allocation Vector
+TLS Transport Layer Security
