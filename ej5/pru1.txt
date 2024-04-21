@@ -41,6 +41,7 @@ SQL Structured Query Language
 SRI Servicio de Reconocimiento de Interrupción
 SSD Solid State Drive
 TCP Transmission Control Protocol
+TLS Transport Layer Security
 UDP User Datagram Protocol
 WAN Wide Area Network
 WAR Write after Read

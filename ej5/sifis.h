@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-char params[3];
+char params[2];
 
 struct pag_s {
     void* ent[26];
@@ -15,19 +15,22 @@ int main (int argc, char** argv);
 pag_t* new_pag(); 
 
 /*estructurar*/
-pag_t* cargar(FILE* fp);
+pag_t* cargar(FILE* fp, FILE* out);
 
 /*meter*/
-int meter(pag_t* res,char* linea); 
+int meter(pag_t* res,char* linea, FILE* out);
 
 /*fallo*/
-void fallo(pag_t*,int n1, int n2, int s,char* linea);
+void fallo(FILE* out,char* linea);
+
+/*sacar*/ 
+void sacar(char* linea, FILE* fp);
 
 /*liberar memoria*/
 void liberar(pag_t* pag);
 
 /*push*/
-int push(pag_t* est,FILE* fp);
+int push(pag_t* pag,FILE* fp);
 
-/*TLB traducciones*/
-void* TLB (void);
+/*modifica*/
+int modifica(FILE* fp,FILE* out, pag_t* tp);
