@@ -27,6 +27,7 @@ MCM Mínimo Común Múltiplo
 MTU Unidad Máxima de Transferencia/Máquina de Turing Universal
 NAT Network Address Translation
 NAV Network Allocation Vector
+ONG oganizacion no gubernamental
 OOF Out of Order Fetch
 OOP Programación Orientada a Objetps
 PCM Modulación por impulso codificado
