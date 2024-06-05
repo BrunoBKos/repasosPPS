@@ -5,6 +5,8 @@
 
 struct map_s {
     void* table[1024];
+    unsigned long(*hash)(void* key);
+    int(*equals)(void* one,void* two);
 }; typedef struct map_s map_t;
 
 struct lista_s {
@@ -13,7 +15,7 @@ struct lista_s {
 }; typedef struct lista_s lista_t;
 
 /*newmap*/
-map_t* newmap();
+map_t* newmap(unsigned long(*hash)(void* key), int(*equals)(void* one,void* two));
 
 /*put*/
 int put(map_t* map, void* key, void* val);
@@ -25,4 +27,8 @@ void* get(map_t* map, void* key);
 int rm(map_t* map, void* key);
 
 /*binarysearch para buscar un elemento en la lista*/
-int binarysearch(lista_t* list, unsigned long elem);
+int binarysearch(lista_t* list, unsigned long elem, unsigned long(*hash)(void* key));
+
+int eq(void* one,void* two);
+
+unsigned long hs(void* key);
