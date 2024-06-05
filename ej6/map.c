@@ -1,32 +1,5 @@
 #include "map.h"
-int main( void ) {
-    int ok,i;
-    int keys[1024];
-    char* str = "iteracion\0";
-    map_t* mapa;
-    i = 0;
-    ok = 0;
-    mapa = newmap(NULL,NULL);
-    fprintf(stdout,"%ld ",sizeof(int));
-    while(ok == 0 && i < 1024) {
-        put(mapa,&keys[i],str);
-        i++;
-    }
-    if(ok == 1) {
-        fprintf(stdout,"%d",i);
-    }
-    i = 0;
-    while(ok == 0 && i < 1024) {
-        str = get(mapa,&keys[i]);
-        
-        if(str != NULL) {
-            fprintf(stdout,"%d ",i);
-        }
-        i++;
-    }
-    free(mapa);
-    return ok;
-}
+
 map_t* newmap(unsigned long(*hash)(void* key), int(*equals)(void* one,void* two)) {
     int i;
     map_t* res;
@@ -69,7 +42,9 @@ int put(map_t* map, void* key, void* val) {
     void* aux1;
     void* aux2;
     void* aux3;
+    unsigned long* hss;
     unsigned long hash;
+    unsigned long auxh;
     if(key == NULL || val == NULL) {
         return 1;
     }
@@ -82,7 +57,8 @@ int put(map_t* map, void* key, void* val) {
     else if((*map).table[aux+1] == NULL) {
         lst = (*map).table[aux];
         list = (*lst).elems;
-        ok = binarysearch(lst,hash,(*map).hash);
+        hss = (*lst).hss;
+        ok = binarysearch(lst,hash);
         if(ok > 0) {
             if(list[(ok*2)+1] != NULL) {
                 if((*map).equals(key,list[ok*2])) {
@@ -108,6 +84,7 @@ int put(map_t* map, void* key, void* val) {
                     (*l).elems = lt;
                     list[ok*2] = l;
                     list[ok*2 + 1] = NULL;
+                    ok = 0;
                 }
             }
             else {
@@ -137,16 +114,24 @@ int put(map_t* map, void* key, void* val) {
             }
         }
         else {
-            list = realloc(list,sizeof(void*)*((*lst).tam+2));
+            list = (void**) realloc(list,sizeof(void*)*((*lst).tam+2));
             if(list == NULL) {
                 return 1;
             }
+            hss = (unsigned long*) realloc(hss,sizeof(unsigned long)*((*lst).tam/2 + 1));
+            if(hss == NULL) {
+                return 1;
+            }
+            (*lst).hss = hss;
             (*lst).elems = list;
             (*lst).tam = ((*lst).tam + 2);
             aux = ((ok + 1)*(-1))*2;
             aux1 = key;
             aux3 = val;
             while(list[aux] != NULL) {
+                auxh = hss[aux/2];
+                hss[aux/2] = hash;
+                hash = auxh;
                 aux2 = list[aux];
                 list[aux] = aux1;
                 aux1 = aux2;
@@ -155,6 +140,7 @@ int put(map_t* map, void* key, void* val) {
                 aux3 = aux2;
                 aux = aux + 2;
             }
+            hss[aux/2] = hash;
             list[aux] = aux1;
             list[aux+1] = aux3;
             list[aux+2] = NULL;
@@ -175,6 +161,12 @@ int put(map_t* map, void* key, void* val) {
                 if(list == NULL) {
                     return 1;
                 }
+                hss = (unsigned long*) malloc(sizeof(unsigned long)*2);
+                if(hss == NULL) {
+                    return 1;
+                }
+                hss[0] = hash;
+                (*lst).hss = hss;
                 list[2] = NULL;
                 list[3] = NULL;
                 list[1] = NULL;
@@ -186,6 +178,7 @@ int put(map_t* map, void* key, void* val) {
                 if(lt == NULL) {
                     return 1;
                 }
+                list[0] = l;
                 lt[0] = (*map).table[aux];
                 lt[1] = (*map).table[aux+1];
                 lt[2] = key;
@@ -209,15 +202,24 @@ int put(map_t* map, void* key, void* val) {
             if(list == NULL) {
                 return 1;
             }
+            hss = (unsigned long*) malloc(sizeof(unsigned long)*3);
+            if(hss == NULL) {
+                return 1;
+            }
+            (*lst).hss = hss;
             list[4] = NULL;
             list[5] = NULL;
             if (hash < (*map).hash((*map).table[aux]) ) {
                 list[0] = key;
+                hss[0] = hash;
+                hss[1] = (*map).hash((*map).table[aux]);
                 list[1] = val;
                 list[2] = (*map).table[aux];
                 list[3] = (*map).table[aux+1];
             }
             else {
+                hss[1] = hash;
+                hss[0] = (*map).hash((*map).table[aux]);
                 list[2] = key;
                 list[3] = val;
                 list[0] = (*map).table[aux];
@@ -250,14 +252,14 @@ void* get(map_t* map, void* key) {
     else if((*map).table[aux+1] == NULL) {
         lst = (lista_t*) (*map).table[aux];
         list = (*lst).elems;
-        i = binarysearch(lst, hash,(*map).hash);
+        i = binarysearch(lst, hash);
         if(i < 0) {
             res = NULL;
         }
         else {
             if(list[i*2 + 1] != NULL) {
                 if((*map).equals(key,list[i*2])) {
-                    res = list[i*2];
+                    res = list[i*2 + 1];
                 }
                 else {
                     return NULL;
@@ -309,7 +311,7 @@ int rm(map_t* map, void* key) {
     else if((*map).table[aux+1] == NULL) {
         lst = (lista_t*) (*map).table[aux];
         list = (*lst).elems;
-        i = binarysearch(lst, hash,(*map).hash);
+        i = binarysearch(lst, hash);
         if(i < 0) {
             res = 1;
         }
@@ -347,20 +349,20 @@ int rm(map_t* map, void* key) {
     return res;
 }
 
-int binarysearch(lista_t* list, unsigned long elem, unsigned long(*hash)(void* key)) {
+int binarysearch(lista_t* list, unsigned long elem) {
     int res,ok;
     int sup,inf;
-    void** lst;
+    unsigned long* arr;
+    arr = (*list).hss;
     ok = 1;
     inf = 0;
     sup = (((*list).tam - 2)/2)-1;
-    lst = (*list).elems;
     while(ok == 1 && (sup-inf) > 1 ) {
         res = ((sup - inf)/2) + inf;
-        if(elem < hash(lst[res*2])) {
+        if(elem < arr[res]) {
            sup = res; 
         }
-        else if(elem > hash(lst[res*2])) {
+        else if(elem > arr[res]) {
             inf = res;
         }
         else {
@@ -371,16 +373,16 @@ int binarysearch(lista_t* list, unsigned long elem, unsigned long(*hash)(void* k
         return res;
     }
     else {
-        if(elem == hash(lst[sup*2])) {
+        if(elem == arr[sup]) {
            return sup;
         }
-        if(elem == hash(lst[inf*2])) {
+        if(elem == arr[inf]) {
             return inf;
         }
-        if(elem > hash(lst[sup*2])) {
+        if(elem > arr[sup]) {
             return (sup + 2)*(-1);
         }
-        if(elem > hash(lst[inf*2])) {
+        if(elem > arr[inf]) {
             return (sup + 1)*(-1);
         }
         return (inf + 1)*(-1);

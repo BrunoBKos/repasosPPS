@@ -11,6 +11,7 @@ struct map_s {
 
 struct lista_s {
     int tam;
+    unsigned long* hss;
     void** elems;
 }; typedef struct lista_s lista_t;
 
@@ -27,7 +28,7 @@ void* get(map_t* map, void* key);
 int rm(map_t* map, void* key);
 
 /*binarysearch para buscar un elemento en la lista*/
-int binarysearch(lista_t* list, unsigned long elem, unsigned long(*hash)(void* key));
+int binarysearch(lista_t* list, unsigned long elem);
 
 int eq(void* one,void* two);
 
