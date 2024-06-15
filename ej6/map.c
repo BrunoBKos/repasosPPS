@@ -1,5 +1,35 @@
 #include "map.h"
 
+unsigned long hashInt(void* key) {
+    return *((int*) key);
+}
+
+int equalsInt(void* left, void* right) {
+    return *((int*) left) == *((int*) right);
+}
+unsigned long hashStr(void* key) {
+    unsigned long res,k;
+    unsigned i,n;
+    unsigned char car;
+    res = 0;
+    k = 1;
+    n = strlen((char*) key);
+    if(n > 56) { 
+        n = 56;
+    }
+    for(i = 0; i < n ; i++) {
+        car = ((unsigned char*) key)[i];
+        res += (k*((int)car));
+        k<<=1;
+    }
+    return res;
+}
+
+int equalsStr(void* left, void* right) {
+    return strcmp((char*) left, (char*) right) == 0;
+    return 1;
+}
+
 map_t* newmap(unsigned long(*hash)(void* key), int(*equals)(void* one,void* two)) {
     int i;
     map_t* res;
@@ -270,7 +300,7 @@ void* get(map_t* map, void* key) {
                 list = (*lst).elems;
                 i = 0;
                 aux = 0;
-                while(i == 0 && list[aux+2] != NULL) {
+                while(i == 0 && list[aux] != NULL) {
                     if((*map).equals(key,list[aux])) {
                         res = list[aux+1];
                         i = 1;
@@ -296,7 +326,7 @@ void* get(map_t* map, void* key) {
 
 int rm(map_t* map, void* key) {
     int res;
-    int aux, i;
+    int aux, i,aux2;
     void** list;
     lista_t* lst;
     unsigned long hash;
@@ -315,8 +345,11 @@ int rm(map_t* map, void* key) {
         if(i < 0) {
             res = 1;
         }
-        else {
-            res = aux;
+        else if(list[(i*2)+1] != NULL) {
+            if(!(*map).equals(key,list[i*2])) {
+                return 1;
+            }
+            aux2 = aux;
             aux = i*2;
             while(list[aux] != NULL) {
                 list[aux] = list[aux+2];
@@ -327,17 +360,50 @@ int rm(map_t* map, void* key) {
             if(list == NULL) { return -1;}
             (*lst).tam = (*lst).tam - 2;
             if((*lst).tam < 6) {
-                (*map).table[aux] = list[0];
-                (*map).table[aux+1] = list[1];
+                (*map).table[aux2] = list[0];
+                (*map).table[aux2+1] = list[1];
                 free(list);
                 free(lst);
             }
             (*lst).elems = list;
             res = 0;
         }
+        else {
+            aux2 = aux;
+            aux = 0;
+            lst = (lista_t*) list[i*2];
+            list = (*lst).elems;
+            while(list[aux] != NULL) {
+                if((*map).equals(list[aux],key)){
+                    break;
+                }
+                aux += 2;
+            }
+            if(list[aux] == NULL) {
+                return 1;
+            }
+            while(list[aux] != NULL) {
+                list[aux] = list[aux+2];
+                list[aux+1] = list[aux+3];
+                aux = aux + 2;
+            }
+            (*lst).tam = (*lst).tam - 2;
+            if((*lst).tam < 6) {
+                (* (lista_t*) (*map).table[aux2]).elems[i*2] = list[0];
+                (* (lista_t*) (*map).table[aux2]).elems[(i*2)+1] = list[1];
+                free(list);
+                free(lst);
+            }
+            else {
+                list = realloc(list, sizeof(void*)*((*lst).tam));
+                if(list == NULL) {return 1;}
+                (*lst).elems = list;
+            }
+            res = 0;
+        }
     }
     else {
-        if((*map).table[aux] == key) {
+        if((*map).equals(key,(*map).table[aux])) {
             (*map).table[aux] = NULL;
             (*map).table[aux+1] = NULL;
             res = 0;
@@ -389,4 +455,28 @@ int binarysearch(lista_t* list, unsigned long elem) {
     }
 
     return res;
+}
+
+void free_m(map_t* map) {
+    int i,j,k;
+    lista_t* lt;
+    void** lst;
+
+    if(map == NULL) {
+        return;
+    }
+    for(i = 0; i < 512; i++) {
+        if((*map).table[i*2] != NULL && (*map).table[(i*2)+1] == NULL) {
+            lt = (lista_t*) (*map).table[i*2];
+            k = (*lt).tam;
+            lst = (*lt).elems;
+            for(j = 0; j < k; j+=2) {
+                if(lst[j] != NULL && lst[j+1] == NULL) {
+                    free(lst[j]);
+                }
+            }
+            free(lt);
+        }
+    }
+    free(map);
 }

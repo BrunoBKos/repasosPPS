@@ -1,10 +1,15 @@
-programa: main.o
-	gcc -Wall -Wextra -Werror -ansi -pedantic -o programa main.o
-main.o: map.o
-	gcc -Wall -Wextra -Werror -ansi -pedantic -c main.c -o main.o map.o
-map.o:
-	gcc -Wall -Wextra -Werror -ansi -pedantic -c map.c -o map.o
+SOURCES=map.c
+OBJECTS=$(SOURCES:.c=.o)
 
-clean: 
-	rm -f programa
+libmap.a: $(OBJECTS)
+	ar rcs libmap.a $(OBJECTS)
+
+$(OBJECTS): $(SOURCES)
+	gcc -c $(SOURCES) -ansi -pedantic -Wall -Wextra
+
+test: test.c
+	gcc -o test test.c -ansi -pedantic -Wall -Wextra -lmap -L. -g
+
+clean:
+	rm -f test libmap.a
 	rm -f *.o

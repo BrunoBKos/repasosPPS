@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 struct map_s {
     void* table[1024];
     unsigned long(*hash)(void* key);
@@ -33,3 +32,13 @@ int binarysearch(lista_t* list, unsigned long elem);
 int eq(void* one,void* two);
 
 unsigned long hs(void* key);
+
+unsigned long hashInt(void* key);
+
+unsigned long hashStr(void* key);
+
+int equalsInt(void* left, void* right);
+
+int equalsStr(void* left, void* right);
+
+void free_m(map_t* map);
