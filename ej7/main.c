@@ -1,14 +1,8 @@
 #include "comp.h"
 
 int main(int argc, char** argv) {
-    FILE* fp;
-    if(argc < 2) {
+    if(argc < 3) {
         return 1;
     }
-    fp = fopen(argv[1],"r");
-    if(fp == NULL) {
-        return 1;
-    }
-    
-    return comprime(fp);
+    return descomprime(argv[1],argv[2]);
 }

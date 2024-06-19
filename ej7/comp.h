@@ -2,13 +2,19 @@
 #include <stdlib.h>
 #include <string.h>
 
+struct half_s {
+    unsigned char val[2];
+}; typedef struct half_s half_t;
 
 /* comprime */
 
-int comprime(FILE* fp);
+int comprime(char* src, char* dest);
 
 /* descomprime */
 
-int descomprime(FILE* fp);
+int descomprime(char* src, char* dest);
 
-/* liberar  ya veremos :)*/
+/*coinciden caracteres de dos cadenas*/
+int coinCar(char* str,char* str2, int to);
+
+int buscaMax(char* str, int from, int to, int* pos);
