@@ -1,0 +1,31 @@
+ld     00001
+ld.b   00010
+ld.bu  00011
+st     00100
+st.b   00101
+
+cmp    00110
+bb1    00111
+bb0    01000
+
+br     01001
+jmp    010100
+bsr    01100
+ 
+and    01110
+and.u  01111
+or     10000
+or.u   10001
+xor    10010
+xor.u  10011
+
+add    10100
+add.u  10101
+sub    10110
+sub.u  10111
+mul    11000
+mul.u  11001
+div    11010
+div.u  11011
+mak    11100
+extu   11101 
