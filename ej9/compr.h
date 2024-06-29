@@ -17,7 +17,7 @@ struct cmprsor_s {
 
 int comprime(FILE* in, FILE* out);
 
-int descomprime();
+int descomprime(FILE* in, FILE* out);
 
 void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs);
 
@@ -28,3 +28,7 @@ int coinCar(char* str,char* str2, int to);
 int compara(cola_t* cola, int e[2]);
 
 void enqueue(cola_t* cola, int e[2]);
+
+int sacacola(cola_t* cola,int e);
+
+int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola);

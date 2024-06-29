@@ -1,6 +1,38 @@
 #include "compr.h"
 
-int descomprime();
+int descomprime(FILE* in, FILE* out) {
+    cmprsor_t cmpr;
+    cola_t cola;
+    unsigned int tam = 0;
+    int aux;
+    int e[2] = {0,0};
+    int alert;
+    /*inicializacion de las variables*/
+    cmpr.pos_cmpr = 0;
+    cmpr.pos_lns = 0;
+    alert = 0; 
+    cola.elems = -4;
+
+    tam += fread(cmpr.text_comp,1,1024,in);
+    tam += fread(&((cmpr.text_comp)[tam]),1,1024,in);
+    enqueue(&cola,e);
+    while((cmpr.pos_cmpr>>3) < tam) {
+        if((unsigned int) alert != ((cmpr.pos_lns % 37888) >> 10)) {
+            fwrite(&((cmpr.lineas)[(((((cmpr.pos_lns%37888)>>10)-1)<<10)%37888)]),1,1024,out); 
+            alert = ((cmpr.pos_lns % 37888) >> 10);
+        }
+        aux = (cmpr.pos_cmpr >> 3) % 1024;
+        sacafueraconlosbits(&cmpr,&cola);
+        if((unsigned long) aux != ((cmpr.pos_cmpr >> 3) % 1024)) {
+            tam += fread(&((cmpr.text_comp)[((((cmpr.pos_cmpr >> 13)+1)<<10)%1024)]),1,1024,in);
+        }
+    }
+    fprintf(stderr, "bits:%ld",cmpr.pos_cmpr);
+    aux = (cmpr.pos_lns)%37888; 
+    if(!(cmpr.pos_lns % 1024 == 0))
+        fwrite(&(cmpr.lineas)[(aux>>10)<<10],1,(aux%1024)+1,out);
+    return 0;
+}
 /*struct cmprsor_s {
     unsigned int pos_lns;
     char lineas[4096];
@@ -190,7 +222,7 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
                 mask = mask >> 1;
             }
             break;
-        case 1: /*[8,41]*/ /*01 5 bits*/
+        case 1: /*[8,39]*/ /*01 5 bits*/
             mask = 16;
             aux = e[0] - 8;
             comprbytes[(i+1)>>3] += (128 >> ((i+1)%8));
@@ -242,29 +274,145 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
     (*cmpr).pos_cmpr = ((((*cmpr).pos_cmpr)/8)*8) + i;
 }
 
-/*int sacafueraconlosbits(dscmpr_t* cmpr) {
+int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
     unsigned int i;
     int mask,aux;
     unsigned long j;
-    int cas[2] = {0,0};
+    int cas[2] = {0,0}; /*{len, dist}*/
     char baux;
     i = (*cmpr).pos_lns;
     j = (*cmpr).pos_cmpr;
     aux = ((j >> 3) % 2048);
     j = j % 8;
-    if(!(((*cmpr).text_comp)[aux] & (128 >> j))) {
-        mask = 128;
-        baux = 0;
-        while(mask > 0) {
-            baux += (((*cmpr).text_comp)[(aux + (j >> 3))%2048] & (128 >> (j%8)))
-            j++;
-        }
-        (*cmpr).pos_cmpr = ((((*cmpr).pos_cmpr >> 3) << 3) + j);
-        ((*cmpr).lineas)[((*cmpr).pos_lns)%37888] = baux;
-        return;
+    aux = j;
+    while((((*cmpr).text_comp)[aux + (j>>3)] & (128 >> (j%8)))) {
+        j++;
+        if((j-i) == 5) {
+            break;
+        } 
     }
+    j++;
+    switch(j - i - 1) {
+        case 0:
+            mask = 128;
+            baux = 0;
+            while(mask > 0) {
+                baux += (((*cmpr).text_comp)[(aux + (j >> 3))%2048] & (128 >> (j%8)));
+                j++;
+            }
+            (*cmpr).pos_cmpr = ((((*cmpr).pos_cmpr >> 3) << 3) + j);
+            ((*cmpr).lineas)[((*cmpr).pos_lns)%37888] = baux;
+            (*cmpr).pos_lns += 1;
+            return 0;
+        case 1:
+            break;
+        case 2:
+            cas[1] = 1;
+            if(!((((*cmpr).text_comp)[aux + (j>>3)] & (128 >> (j%8))))) {
+                cas[0] = 1;
+            }
+            j++;
+            break;
+        case 3:
+            cas[1] = 2;
+            break;
+        case 4:
+            cas[1] = 3;
+            break;
+        case 5:
+            j--;
+            cas[1] = 4;
+            break;
+    }
+    /*length*/
+    if(cas[0] == 0) {
+        i = j;
+        while((((*cmpr).text_comp)[aux + (j>>3)] & (128 >> (j%8)))) {
+            j++;
+            if((j-i) == 2) {
+                break;
+            } 
+        }
+        j++;
+        mask = 0;
+        switch(j - i -1) {
+            case 0:
+                i = 3;
+                cas[0] = 2;
+                break;
+            case 1:
+                i = 3;
+                cas[0] = 10;
+                break;
+            case 2:
+                i = 8;
+                cas[0] = 18;
+                j--;
+                break;
+        }
+        while(i > 0) {
+            cas[0] += (mask * (0 != ((((*cmpr).text_comp)[aux + (j >> 3)]) & (128 >> (j%8)))));
+            mask <<= 1;
+            j++;
+            i--;
+        }
+    }
+
+    /*dist*/
+
+    if(cas[1] == 0) {
+        i = j;
+        while((((*cmpr).text_comp)[aux + (j>>3)] & (128 >> (j%8)))) {
+            j++;
+            if((j-i) == 3) {
+                break;
+            } 
+        }
+        j++;
+        switch(j - i -1) {
+            case 0:
+                if((((*cmpr).text_comp)[aux + (j>>3)] & (128 >> (j%8)))) {
+                    i = 5;
+                    cas[1] = 8;
+                }
+                else {
+                    i = 3;
+                }
+                break;
+            case 1:
+                i = 8;
+                cas[1] = 40;
+                break;
+            case 2:
+                i = 12;
+                cas[1] = 296;
+                break;
+            case 3:
+                cas[1] = 4393;
+                i = 15;
+                j--;
+                break;
+        }
+        mask = 1;
+        while(i > 0) {
+            cas[1] += (mask * (0 != ((((*cmpr).text_comp)[aux + (j >> 3)]) & (128 >> (j%8)))));
+            mask <<= 1;
+            j++;
+            i--;
+        }
+        enqueue(cola,cas);
+    }
+    else {
+        cas[1] = sacacola(cola,cas[1]);
+    }
+    (*cmpr).pos_cmpr = ((((*cmpr).pos_cmpr >> 3) << 3) + j);
+    for(i = 0; i < (unsigned int) cas[0]; i++) {
+        ((*cmpr).lineas)[((*cmpr).pos_lns + i)%37888] = ((*cmpr).lineas)[((*cmpr).pos_lns + i - cas[1])%37888];
+    }
+    (*cmpr).pos_lns += i;
+    return 0;
 }
-*/
+
 int coinCar(char* str,char* str2, int to) {
     int res;
     res = 0;
@@ -298,4 +446,8 @@ int buscaMax(char* str, int from, int to, int* pos) {
     }
     *pos = res[1];
     return res[0];
+}
+
+int sacacola(cola_t* cola,int e) {  
+    return ((*cola).dists)[((*cola).elems + e)%4];
 }
