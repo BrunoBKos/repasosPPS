@@ -10,7 +10,7 @@ struct cola_s {
 
 struct cmprsor_s {
     unsigned int pos_lns;
-    char lineas[4096];
+    char lineas[37888];
     unsigned long pos_cmpr;
     char text_comp[2048]; 
 }; typedef struct cmprsor_s cmprsor_t;
