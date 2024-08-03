@@ -22,7 +22,7 @@ int descomprime(FILE* in, FILE* out) {
     enqueue(&cola,e);
     while((cmpr.pos_cmpr>>3) < tam) {
         if((unsigned int) alert != ((cmpr.pos_lns % 37888) >> 10)) {
-            fwrite(&((cmpr.lineas)[(((((cmpr.pos_lns%37888)>>10)-1)<<10)%37888)]),1,1024,out); 
+            fwrite(&((cmpr.lineas)[(((((cmpr.pos_lns%37888)>>10)+36)<<10)%37888)]),1,1024,out); 
             alert = ((cmpr.pos_lns % 37888) >> 10);
         }
         aux = (cmpr.pos_cmpr >> 3) / 1024;
@@ -269,7 +269,7 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
                 mask = mask >> 1;
             }
             break;
-        case 4: /*[4393,36864]*/ /*111 15 bits*/
+        case 4: /*[4393,35840]*/ /*111 15 bits*/
             mask = 16384;
             aux = e[1] - 4393;
             comprbytes[i>>3] += (128 >> (i%8));
@@ -283,7 +283,7 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
         default: /*no hay length*/
             break;
     }
-    if (36864 >= (*cmpr).pos_lns ) {
+    if (37379 == (*cmpr).pos_lns ) {
         printf("cs:%d;bit:%ld;length:%d;dist:%d;car:%d;",cs,(*cmpr).pos_cmpr,e[0],e[1],(*cmpr).pos_lns);
     }
     for(mask = 0; mask < ((i>>3)+1); mask++) {
@@ -296,12 +296,13 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
     /*if(i > 200) {
         fprintf(stderr,"aqui estan pasando cosas; i:%ld,aux:%d,ln:%d,dist:%d",i,cs,e[0],e[1]);
     }*/
-    if (36864 == (*cmpr).pos_lns ) {
+    if (37379 == (*cmpr).pos_lns ) {
         printf("i:%ld;bit:%ld;",i,(*cmpr).pos_cmpr);
     }
     (*cmpr).pos_cmpr = (((((*cmpr).pos_cmpr)/8)*8) + i);
-    if (36864 == (*cmpr).pos_lns ) {
+    if (37379 == (*cmpr).pos_lns ) {
         printf("bit de fallo:%ld;",(*cmpr).pos_cmpr);
+        printf("-%c-%c-%c-%c",((*cmpr).lineas)[577],((*cmpr).lineas)[578],((*cmpr).lineas)[579],((*cmpr).lineas)[580]);
     }
     /*if(e[1] == 341) {
         printf("los bits que hay que mirar son: %ld ",(*cmpr).pos_cmpr);
@@ -464,7 +465,7 @@ int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
     else {
         cas[1] = sacacola(cola,cas[1]);
     }
-    if((*cmpr).pos_lns == 9955/* || (*cmpr).pos_lns == 4243 || (*cmpr).pos_lns == 4241 */) {
+    if((*cmpr).pos_lns == 36858/* || (*cmpr).pos_lns == 4243 || (*cmpr).pos_lns == 4241 */) {
         printf("length:%d;dist:%d;",cas[0],cas[1]);
     } 
     (*cmpr).pos_cmpr = ((((*cmpr).pos_cmpr >> 3) << 3) + j);
@@ -473,16 +474,19 @@ int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
     }
     for(i = 0; ((int) i) < cas[0]; i++) {
         ((*cmpr).lineas)[((*cmpr).pos_lns + i)%37888] = ((*cmpr).lineas)[((*cmpr).pos_lns + i - cas[1])%37888];
+        if((*cmpr).pos_lns == 36858) {
+            printf("-%c-",((*cmpr).lineas)[((*cmpr).pos_lns + i - cas[1])%37888]);
+        }
     }
     (*cmpr).pos_lns += i;
     return 0;
 }
 
-int coinCar(char* str,char* str2, int to) {
+int coinCar(char* str,int st1, int st2, int to) {
     int res;
     res = 0;
     while(res < to && res < 273) {
-        if(str[(res%4096)] != str2[(res%4096)]) {
+        if(str[(res+st1)%37888] != str[(res+st2)%37888]) {
             break;
         }
         res++;
@@ -495,10 +499,10 @@ int buscaMax(char* str, int from, int to, int* pos) {
     int res[2];
     res[0] = 0;
     i = 1;
-    aux2 = (from < 36864) ? from : 36864;
+    aux2 = (from < 35840) ? from : 35840;
     while(i < aux2) {
         if(str[(from % 37888)] == str[((from - i) % 37888)]) {
-            aux = coinCar(&str[(from % 37888)], &str[(from - i) % 37888],to - from);
+            aux = coinCar(str,from,(from - i + 37888),to - from);
             if(res[0] < aux) {
                 res[0] = aux;
                 res[1] = i;
