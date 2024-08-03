@@ -137,7 +137,7 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
     /*codigo comprimido*/
     switch(cs) {
         case 1: /*literal: 0 + byte*/
-            baux = ((*cmpr).lineas)[((*cmpr).pos_lns)%20480];
+            baux = ((*cmpr).lineas)[((*cmpr).pos_lns)%37888];
             mask = 128;
             for(i += 1; mask > 0 ;i++) {
                 comprbytes[i>>3] += (((mask & baux) != 0) << (7 - (i%8)));
@@ -283,8 +283,8 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
         default: /*no hay length*/
             break;
     }
-    if (4234 == (*cmpr).pos_lns ) {
-        printf("cs:%d;bit:%ld;length:%d;dist:%d;",cs,(*cmpr).pos_cmpr,e[0],e[1]);
+    if (36864 >= (*cmpr).pos_lns ) {
+        printf("cs:%d;bit:%ld;length:%d;dist:%d;car:%d;",cs,(*cmpr).pos_cmpr,e[0],e[1],(*cmpr).pos_lns);
     }
     for(mask = 0; mask < ((i>>3)+1); mask++) {
         ((*cmpr).text_comp)[(j+mask)%2048] = comprbytes[mask];
@@ -296,11 +296,11 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
     /*if(i > 200) {
         fprintf(stderr,"aqui estan pasando cosas; i:%ld,aux:%d,ln:%d,dist:%d",i,cs,e[0],e[1]);
     }*/
-    if (4234 == (*cmpr).pos_lns ) {
+    if (36864 == (*cmpr).pos_lns ) {
         printf("i:%ld;bit:%ld;",i,(*cmpr).pos_cmpr);
     }
     (*cmpr).pos_cmpr = (((((*cmpr).pos_cmpr)/8)*8) + i);
-    if (4234 == (*cmpr).pos_lns ) {
+    if (36864 == (*cmpr).pos_lns ) {
         printf("bit de fallo:%ld;",(*cmpr).pos_cmpr);
     }
     /*if(e[1] == 341) {
@@ -319,7 +319,7 @@ int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
     aux = ((j >> 3) % 2048);
     j = j % 8;
     i = j;
-    if((*cmpr).pos_lns == 4242) {
+    if((*cmpr).pos_lns == 9955) {
         printf("estado del bit err:%ld;",(*cmpr).pos_cmpr);
         for(mask = 0; mask < 8; mask++) {
             printf("_%X",((*cmpr).text_comp)[(aux + mask)%2048]);
@@ -378,7 +378,7 @@ int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
             cas[1] = 4;
             break;
     }
-    if((*cmpr).pos_lns == 4234) {
+    if((*cmpr).pos_lns == 9955) {
         printf("estado 2 del bit:%ld;",(*cmpr).pos_cmpr);
     }
     /*length*/
@@ -407,7 +407,7 @@ int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
                 break;
         }
         while(mask > 0) {
-            cas[0] += (mask * (0 != ((((*cmpr).text_comp)[aux + (j >> 3)]) & (128 >> (j%8)))));
+            cas[0] += (mask * (0 != ((((*cmpr).text_comp)[(aux + (j >> 3))%2048]) & (128 >> (j%8)))));
             mask >>= 1;
             j++;
         }
@@ -428,7 +428,7 @@ int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
         j++;
         switch(j - i -1) {
             case 0:
-                if((((*cmpr).text_comp)[aux + (j>>3)] & (128 >> (j%8)))) {
+                if((((*cmpr).text_comp)[(aux + (j>>3))%2048] & (128 >> (j%8)))) {
                     mask = 16;
                     cas[1] = 8;
                 }
@@ -464,11 +464,11 @@ int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
     else {
         cas[1] = sacacola(cola,cas[1]);
     }
-    if((*cmpr).pos_lns == 4234/* || (*cmpr).pos_lns == 4243 || (*cmpr).pos_lns == 4241 */) {
+    if((*cmpr).pos_lns == 9955/* || (*cmpr).pos_lns == 4243 || (*cmpr).pos_lns == 4241 */) {
         printf("length:%d;dist:%d;",cas[0],cas[1]);
     } 
     (*cmpr).pos_cmpr = ((((*cmpr).pos_cmpr >> 3) << 3) + j);
-    if((*cmpr).pos_lns == 4234) {
+    if((*cmpr).pos_lns == 9955) {
         printf("estado 3 del bit:%ld;",(*cmpr).pos_cmpr);
     }
     for(i = 0; ((int) i) < cas[0]; i++) {
