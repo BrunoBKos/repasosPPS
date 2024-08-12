@@ -1,121 +1,98 @@
 #include "compr.h"
+/*funciones principales*/
 
-int descomprime(FILE* in, FILE* out) {
-    cmprsor_t cmpr;
-    cola_t cola;
-    unsigned int tam = 0;
+/*funcion para iniciar la compresion*/
+void comprime(FILE* in, FILE* out) {
+    cmprsor_t cmpr; /*struct compresor*/
+    cola_t cola; /*cola para los longrep*/
+    int e[2] = {0,0}; /*len, dist*/
+    unsigned int tam = 0; /*contador de los caracteres leidos del fichero*/
+    int hs[257];
+    int map[37888];
+    /*variables adicionales*/
     int aux;
+    unsigned int alert;
+    /*inicializacion de las variables*/
+    cmpr.pos_cmpr = 0;
+    cmpr.pos_lns = 0;
+    alert = 0; 
+    cola.tam = -4;
+    tam += fread(cmpr.lineas,1,1024,in);
+    tam += fread(&((cmpr.lineas)[tam]),1,1024,in);
+    memset(hs,-1,1024);
+    /*bucle principal*/
+    while(cmpr.pos_lns < tam) {
+        /*cuando se pasa un bloque de caracteres*/
+        if(alert != ((cmpr.pos_lns % 37888) >> 10)) {
+            /*cargado del siguiente bloque de caracteres*/
+            tam += fread(&((cmpr.lineas)[((((cmpr.pos_lns>>10)+1)<<10)%37888)]),1,1024,in); 
+            alert = ((cmpr.pos_lns % 37888) >> 10);
+        }
+        /*se busca una coincidencia en las lineas anteriores*/
+        e[0] = buscaMax(cmpr.lineas,(cmpr.pos_lns%37888),(tam-cmpr.pos_lns),&(e[1]),hs,map);
+        /*se comprueba si es una posicion repetida*/
+        aux = compara(&cola,e[1]);
+        if(e[0] < 2) {
+            if(aux != 4 || e[0] != 1) {
+                aux = 2;
+            }
+            aux--;
+            e[0] = 1;
+        }
+        if(aux == 2) {
+            enqueue(&cola,e[1]);
+        }
+        /*funcion de compresion*/
+        metedentroconlosbits(e,out,&cmpr,aux,hs,map);
+        cmpr.pos_lns += e[0];
+        e[0] = 0;
+    }
+    /*cargado de los ultimos caracteres comprimidos*/
+    aux = (cmpr.pos_cmpr >> 3)%2048; 
+    if(cmpr.pos_cmpr % 1024) 
+        fwrite(&(cmpr.text_comp)[(aux>>10)<<10],1,(aux%1024)+1,out);
+}
+/*funcion para iniciar la descompresion*/
+void descomprime(FILE* in, FILE* out) {
+    cmprsor_t cmpr; /*compresor*/
+    cola_t cola; /*cola para los longrep*/
+    /*variables*/
+    unsigned int tam = 0;
     int e[2] = {0,0};
+    int aux;
     int alert;
     /*inicializacion de las variables*/
     cmpr.pos_cmpr = 0;
     cmpr.pos_lns = 0;
     alert = 0; 
-    cola.elems = -4;
-
+    cola.tam = -4;
+    /*primera lectura del fichero*/
     tam += fread(cmpr.text_comp,1,1024,in);
     tam += fread(&((cmpr.text_comp)[tam]),1,1024,in);
-    /*for(alert = 0; alert < 20; alert++) {
-        printf("%x ",(unsigned char) ((cmpr.text_comp)[alert]));
-    }*/
     alert = 0;
-    enqueue(&cola,e);
     while((cmpr.pos_cmpr>>3) < tam) {
+        /*cargado de caracteres en el fichero en caso de haberse llenado un segmento*/
         if((unsigned int) alert != ((cmpr.pos_lns % 37888) >> 10)) {
             fwrite(&((cmpr.lineas)[(((((cmpr.pos_lns%37888)>>10)+36)<<10)%37888)]),1,1024,out); 
             alert = ((cmpr.pos_lns % 37888) >> 10);
         }
-        aux = (cmpr.pos_cmpr >> 3) / 1024;
-        sacafueraconlosbits(&cmpr,&cola);
-        /*printf("_j:%ld",cmpr.pos_cmpr);*/
-        if((unsigned long) aux != ((cmpr.pos_cmpr >> 3) / 1024)) {
+        aux = (cmpr.pos_cmpr >> 13); /*divido entre 8*1024*/
+        sacafueraconlosbits(&cmpr,&cola);/*inicio la descompresion*/
+        /*cargado de caracteres en el buffer en caso de haber pasado de segmento*/
+        if((unsigned long) aux != (cmpr.pos_cmpr >> 13)) { 
             tam += fread(&((cmpr.text_comp)[((((cmpr.pos_cmpr >> 13)+1)%2)<<10)]),1,1024,in);
         }
     }
-    /*fprintf(stderr, "bits:%ld",cmpr.pos_cmpr);*/
     aux = (cmpr.pos_lns)%37888; 
+    /*ultimo cargado de caracteres en el fichero en caso de no 
+    haberse podido realizar con anterioridad*/
     if(!(cmpr.pos_lns % 1024 == 0))
         fwrite(&(cmpr.lineas)[((aux>>10)<<10)],1,(aux%1024)+1,out);
-    return 0;
-}
-/*struct cmprsor_s {
-    unsigned int pos_lns;
-    char lineas[4096];
-    unsigned long pos_cmpr;
-    char text_comp[2048]; 
-}; typedef struct cmprsor_s cmprsor_t;*/
-int comprime(FILE* in, FILE* out) {
-    cmprsor_t cmpr;
-    cola_t cola;
-    int e[2] = {0,0}; /*len, dist*/
-    unsigned int tam = 0;
-    int aux;
-    int alert;
-    /*inicializacion de las variables*/
-    cmpr.pos_cmpr = 0;
-    cmpr.pos_lns = 0;
-    alert = 0; 
-    cola.elems = -4;
-    tam += fread(cmpr.lineas,1,1024,in);
-    tam += fread(&((cmpr.lineas)[tam]),1,1024,in);
-    enqueue(&cola,e);
-    while(cmpr.pos_lns < tam) {
-        if((unsigned int) alert != ((cmpr.pos_lns % 37888) >> 10)) {
-            tam += fread(&((cmpr.lineas)[(((((cmpr.pos_lns%37888)>>10)+1)<<10)%37888)]),1,1024,in); 
-            alert = ((cmpr.pos_lns % 37888) >> 10);
-        }
-        e[0] = buscaMax(cmpr.lineas,cmpr.pos_lns,tam,&(e[1]));
-        aux = compara(&cola,e);
-        if(e[0] < 2) {
-            if(aux != 3) {
-                aux = 1;
-            }
-            e[0] = 1;
-        }
-        if(aux == 2) {
-            enqueue(&cola,e);
-            /*if(4400 > cmpr.pos_lns)  {
-            printf("_%d_",e[1]);
-            } */  
-        }
-        metedentroconlosbits(e,out,&cmpr,aux);
-        cmpr.pos_lns += e[0];
-        e[0] = 0;
-        e[1] = 0;
-    }
-    /*fprintf(stderr, "bits:%ld",cmpr.pos_cmpr);*/
-    aux = (cmpr.pos_cmpr >> 3)%2048; 
-    if(!(cmpr.pos_cmpr % 1024 == 0))
-        fwrite(&(cmpr.text_comp)[(aux>>10)<<10],1,(aux%1024)+1,out);
-    return 0;
-}
-int compara(cola_t* cola, int e[2]) {
-    int i, n, j;
-    i = ((*cola).elems + 7) % 4;
-    n = ((*cola).elems < 0 ? ((*cola).elems + 4) : 4);
-    for(j = 0; j < n; j++) {
-        if((((*cola).dists)[((i-j)+4)%4]) == e[1]) {
-            j += 4;
-            n = 5;
-            break;
-        }
-    }
-    if((j==4)&&(e[0]==1)) {
-        j = 3;
-    }
-    return n != 5 ? 2 : j;
 }
 
-void enqueue(cola_t* cola, int e[2]) {
-    int i;
-    i = ((*cola).elems + 4) % 4;
-    ((*cola).lnths)[i] = e[0];
-    ((*cola).dists)[i] = e[1];
-    (*cola).elems += 1;
-    (*cola).elems = (*cola).elems == 4 ? 0 : (*cola).elems;
-}
+/*funciones auxiliares*/
 
-void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
+void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs, int hs[256], int map[37888]) {
     char comprbytes[6];
     char baux;
     unsigned int mask; 
@@ -126,24 +103,21 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
     j = (*cmpr).pos_cmpr;
     i = j%8;
     j = (j >> 3) % 2048;
-    /*if(4234 == (*cmpr).pos_lns) {
-        printf("esta es la linea problematica: %ld ", (*cmpr).pos_cmpr);
-        for(mask = 8; mask > 0; mask--) {
-            printf("%c",((*cmpr).lineas)[(*cmpr).pos_lns + 8 - mask]);
-        }
-    }*/
     comprbytes[0] = (((*cmpr).text_comp)[j]) & ((char) ((255 >> (8 - i)) << (8 - i)));
     memset(&comprbytes[1],0,5);
     /*codigo comprimido*/
     switch(cs) {
         case 1: /*literal: 0 + byte*/
-            baux = ((*cmpr).lineas)[((*cmpr).pos_lns)%37888];
+            aux = ((*cmpr).pos_lns)%37888;
+            baux = ((*cmpr).lineas)[aux];
             mask = 128;
             for(i += 1; mask > 0 ;i++) {
                 comprbytes[i>>3] += (((mask & baux) != 0) << (7 - (i%8)));
                 mask = mask >> 1;
             }
             cas[0] = 5;
+            map[aux] = hs[(unsigned int) baux];
+            hs[(unsigned int) baux] = aux;
             break;
         case 2: /*match: 10 + len + dist*/
             comprbytes[i>>3] += (128 >> (i%8));
@@ -154,24 +128,25 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
             comprbytes[i>>3] += (128 >> (i%8));
             comprbytes[(i+1)>>3] += (128 >> ((i+1)%8));
             cas[0] = 5;
+            aux = ((*cmpr).pos_lns)%37888;
+            baux = ((*cmpr).lineas)[aux];
+            map[aux] = hs[(unsigned int) baux];
+            hs[(unsigned int) baux] = aux;
             i += 4;
             break;
         case 4: /*longrep[0]: 1101 + len*/
-            /*printf("[0] l:%d ", (*cmpr).pos_lns);*/
             comprbytes[i>>3] += (128 >> (i%8));
             comprbytes[(i+1)>>3] += (128 >> ((i+1)%8));
             comprbytes[(i+3)>>3] += (128 >> ((i+3)%8));
             i += 4;
             break;
         case 5: /*longrep[1]: 1110 + len*/
-            /*printf("[1] l:%d ", (*cmpr).pos_lns);*/
             comprbytes[i>>3] += (128 >> (i%8));
             comprbytes[(i+1)>>3] += (128 >> ((i+1)%8));
             comprbytes[(i+2)>>3] += (128 >> ((i+2)%8));
             i += 4;
             break;
         case 6: /*longrep[2]: 11110 + len*/
-            /*printf("[2] l:%d ", (*cmpr).pos_lns);*/
             comprbytes[i>>3] += (128 >> (i%8));
             comprbytes[(i+1)>>3] += (128 >> ((i+1)%8));
             comprbytes[(i+2)>>3] += (128 >> ((i+2)%8));
@@ -179,7 +154,6 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
             i += 5;
             break;
         case 7: /*longrep[3]: 11111 + len*/
-            /*printf("[3] l:%d ", (*cmpr).pos_lns);*/
             comprbytes[i>>3] += (128 >> (i%8));
             comprbytes[(i+1)>>3] += (128 >> ((i+1)%8));
             comprbytes[(i+2)>>3] += (128 >> ((i+2)%8));
@@ -189,7 +163,7 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
             break;
     }
     
-    /*leng*/
+    /*length*/
     cas[0] += (e[0] > 9);
     cas[0] += (e[0] > 17);
     cas[0] += (e[0] > 273);
@@ -224,6 +198,17 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
             break;
         default: /*no hay length*/
             break;
+    }
+    if (cas[0] < 3) {
+        aux = ((*cmpr).pos_lns)%37888;
+        mask = e[0];
+        while(mask > 0) {
+            baux = ((*cmpr).lineas)[aux];
+            map[aux] = hs[(unsigned int) baux];
+            hs[(unsigned int) baux] = aux;
+            mask--;
+            aux = (aux + 1)%37888;
+        }
     }
     /*dist*/
     cas[1] += (e[1] > 7);
@@ -283,33 +268,20 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs) {
         default: /*no hay length*/
             break;
     }
-    if (37379 == (*cmpr).pos_lns ) {
-        printf("cs:%d;bit:%ld;length:%d;dist:%d;car:%d;",cs,(*cmpr).pos_cmpr,e[0],e[1],(*cmpr).pos_lns);
-    }
+    /*cargado de los bits comprimidos en el buffer*/
     for(mask = 0; mask < ((i>>3)+1); mask++) {
         ((*cmpr).text_comp)[(j+mask)%2048] = comprbytes[mask];
     }
-    /*memcpy(&(((*cmpr).text_comp)[j]),comprbytes,(i>>3)+1); */
+    /*cargardo de los bits comprimidos en el 
+    fichero cuando se ha llenado el buffer*/
     if((j < 1024) != (((j+(i>>3))%2048) < 1024)){
         fwrite(&(((*cmpr).text_comp)[((j>>10)<<10)]),1,1024,out);
     }
-    /*if(i > 200) {
-        fprintf(stderr,"aqui estan pasando cosas; i:%ld,aux:%d,ln:%d,dist:%d",i,cs,e[0],e[1]);
-    }*/
-    if (37379 == (*cmpr).pos_lns ) {
-        printf("i:%ld;bit:%ld;",i,(*cmpr).pos_cmpr);
-    }
+    /*actualizacion del contador de bits comprimidos*/
     (*cmpr).pos_cmpr = (((((*cmpr).pos_cmpr)/8)*8) + i);
-    if (37379 == (*cmpr).pos_lns ) {
-        printf("bit de fallo:%ld;",(*cmpr).pos_cmpr);
-        printf("-%c-%c-%c-%c",((*cmpr).lineas)[577],((*cmpr).lineas)[578],((*cmpr).lineas)[579],((*cmpr).lineas)[580]);
-    }
-    /*if(e[1] == 341) {
-        printf("los bits que hay que mirar son: %ld ",(*cmpr).pos_cmpr);
-    }*/
 }
 
-int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
+void sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
     unsigned int i;
     int mask,aux;
     unsigned long j;
@@ -320,16 +292,7 @@ int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
     aux = ((j >> 3) % 2048);
     j = j % 8;
     i = j;
-    if((*cmpr).pos_lns == 9955) {
-        printf("estado del bit err:%ld;",(*cmpr).pos_cmpr);
-        for(mask = 0; mask < 8; mask++) {
-            printf("_%X",((*cmpr).text_comp)[(aux + mask)%2048]);
-        }
-        printf(";");
-    }
-    /*if(4234 == (*cmpr).pos_lns) {
-        printf("esta es la linea problematica: %ld ", (*cmpr).pos_cmpr);
-    }*/
+    /*calculo del caso*/
     while((((*cmpr).text_comp)[(aux + (j>>3))%2048] & (128 >> (j%8)))) {
         j++;
         if((j-i) == 5) {
@@ -352,7 +315,7 @@ int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
             (*cmpr).pos_cmpr = ((((*cmpr).pos_cmpr >> 3) << 3) + j);
             ((*cmpr).lineas)[((*cmpr).pos_lns)%37888] = baux;
             (*cmpr).pos_lns += 1;
-            return 0;
+            return;
         case 1: /*match*/
             break;
         case 2: /*shortrep + longrep[0]*/
@@ -360,31 +323,23 @@ int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
             if(!((((*cmpr).text_comp)[aux + (j>>3)] & (128 >> (j%8))))) {
                 cas[0] = 1;
             }
-            else {
-                /*printf("[0] l:%d ", (*cmpr).pos_lns);*/
-            }
             j++;
             break;
         case 3: /*longrep[1] */
-            /*printf("[1] l:%d ", (*cmpr).pos_lns);*/
             cas[1] = 2;
             break;
         case 4: /*longrep[2]*/
-            /*printf("[2] l:%d ", (*cmpr).pos_lns);*/
             cas[1] = 3;
             break;
         case 5: /*longrep[3]*/
-            /*printf("[3] l:%d ", (*cmpr).pos_lns);*/
             j--;
             cas[1] = 4;
             break;
     }
-    if((*cmpr).pos_lns == 9955) {
-        printf("estado 2 del bit:%ld;",(*cmpr).pos_cmpr);
-    }
     /*length*/
     if(cas[0] == 0) {
         i = j;
+        /*calculo del caso*/
         while((((*cmpr).text_comp)[(aux + (j>>3))%2048] & (128 >> (j%8)))) {
             j++;
             if((j-i) == 2) {
@@ -393,33 +348,31 @@ int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
         }
         j++;
         switch(j - i -1) {
-            case 0:
+            case 0: /*3 bits*/
                 mask = 4;
                 cas[0] = 2;
                 break;
-            case 1:
+            case 1: /*3 bits*/
                 mask = 4;
                 cas[0] = 10;
                 break;
-            case 2:
+            case 2: /*8 bits*/
                 mask = 128;
                 cas[0] = 18;
                 j--;
                 break;
         }
+        /*calculo de la length*/
         while(mask > 0) {
             cas[0] += (mask * (0 != ((((*cmpr).text_comp)[(aux + (j >> 3))%2048]) & (128 >> (j%8)))));
             mask >>= 1;
             j++;
         }
     }
-    /*if((*cmpr).pos_lns == 4234) {
-        printf("caracteres:%ld",(*cmpr).pos_cmpr);
-    }*/
     /*dist*/
-
     if(cas[1] == 0) {
         i = j;
+        /*calculo del caso*/
         while((((*cmpr).text_comp)[(aux + (j>>3))%2048] & (128 >> (j%8)))) {
             j++;
             if((j-i) == 3) {
@@ -430,69 +383,53 @@ int sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
         switch(j - i -1) {
             case 0:
                 if((((*cmpr).text_comp)[(aux + (j>>3))%2048] & (128 >> (j%8)))) {
+                    /*5 bits*/
                     mask = 16;
                     cas[1] = 8;
                 }
-                else {
+                else { /*3 bits*/
                     mask = 4;
                 }
                 j++;
                 break;
-            case 1:
+            case 1: /*8 bits*/
                 mask = 128;
                 cas[1] = 40;
                 break;
-            case 2:
+            case 2:/*12 bits*/
                 mask = 2048;
                 cas[1] = 296;
                 break;
-            case 3:
+            case 3:/*15 bits*/
                 cas[1] = 4393;
                 mask = 16384;
                 j--;
                 break;
         }
+        /*calculo de la distancia*/
         while(mask > 0) {
             cas[1] += (mask * (0 != ((((*cmpr).text_comp)[(aux + (j >> 3))%2048]) & (128 >> (j%8)))));
             mask >>= 1;
             j++;
         }
-        enqueue(cola,cas);
-        /*if(4400 > (*cmpr).pos_lns)  {
-            printf("_%d_",cas[1]);
-        }*/
+        /*la nueva distancia se encola*/
+        enqueue(cola,cas[1]);
     }
     else {
+        /*la distancia no se tiene que calcular sino que se saca de cola*/
         cas[1] = sacacola(cola,cas[1]);
     }
-    if((*cmpr).pos_lns == 36858/* || (*cmpr).pos_lns == 4243 || (*cmpr).pos_lns == 4241 */) {
-        printf("length:%d;dist:%d;",cas[0],cas[1]);
-    } 
+    /*actualizacion del contador de bits comprimidos*/
     (*cmpr).pos_cmpr = ((((*cmpr).pos_cmpr >> 3) << 3) + j);
-    if((*cmpr).pos_lns == 9955) {
-        printf("estado 3 del bit:%ld;",(*cmpr).pos_cmpr);
-    }
+    /*cargado de los caracteres descomprimidos en el buffer*/
     for(i = 0; ((int) i) < cas[0]; i++) {
         ((*cmpr).lineas)[((*cmpr).pos_lns + i)%37888] = ((*cmpr).lineas)[((*cmpr).pos_lns + i - cas[1])%37888];
-        if((*cmpr).pos_lns == 36858) {
-            printf("-%c-",((*cmpr).lineas)[((*cmpr).pos_lns + i - cas[1])%37888]);
-        }
     }
+    /*actualizacion del contador de caracteres descomprimidos*/
     (*cmpr).pos_lns += i;
-    return 0;
 }
 
-int coinCar(char* str,int st1, int st2, int to) {
-    int res;
-    for(res = 0;res < to;res++) {
-        if(str[(res+st1)%37888] != str[(res+st2)%37888]) {
-            break;
-        }
-    }
-    return res;
-}
-/*implementacion con maps de buscaMax*/
-int buscaMax2(char* str, int from, int to, int hs[256], int map[37888]) {
+int buscaMax(char* str, int from, int to,int* pos, int hs[256], int map[37888]) {
     int i, aux, aux2, aux3;
     int res[2];
     res[0] = 0;
@@ -523,33 +460,42 @@ int buscaMax2(char* str, int from, int to, int hs[256], int map[37888]) {
             break;
         }
     }
-    *pos = res[1];
-    return res[0];
-}
-/*implementacion burda de buscaMax*/
-int buscaMax(char* str, int from, int to, int* pos) {
-    int i,aux,aux2;
-    int res[2];
-    res[0] = 0;
-    i = 1;
-    aux2 = (from < 35840) ? from : 35840;
-    while(i < aux2) {
-        if(str[(from % 37888)] == str[((from - i) % 37888)]) {
-            aux = coinCar(str,from,(from - i + 37888),to - from);
-            if(res[0] < aux) {
-                res[0] = aux;
-                res[1] = i;
-            }
-            if(aux == 273) {
-                break;
-            }
-        }
-        i++;
-    }
-    *pos = res[1];
+    *pos = (((from - res[1]) + 37888)%37888);
     return res[0];
 }
 
+int coinCar(char* str,int st1, int st2, int to) {
+    int res;
+    for(res = 0;res < to;res++) {
+        if(str[(res+st1)%37888] != str[(res+st2)%37888]) {
+            break;
+        }
+    }
+    return res;
+}
+
+void enqueue(cola_t* cola, int e) {
+    int i;
+    i = ((*cola).tam + 4) % 4;
+    ((*cola).elems)[i] = e;
+    (*cola).tam += 1;
+    (*cola).tam = (*cola).tam == 4 ? 0 : (*cola).tam;
+}
+
 int sacacola(cola_t* cola,int e) {  
-    return ((*cola).dists)[(((*cola).elems - e)+8)%4];
+    return ((*cola).elems)[(((*cola).tam - e)+8)%4];
+}
+
+int compara(cola_t* cola, int e) {
+    int i, n, j;
+    i = ((*cola).tam + 7) % 4;
+    n = ((*cola).tam < 0 ? ((*cola).tam + 4) : 4);
+    for(j = 0; j < n; j++) {
+        if((((*cola).elems)[((i-j)+4)%4]) == e) {
+            j += 4;
+            n = 5;
+            break;
+        }
+    }
+    return n != 5 ? 2 : j;
 }

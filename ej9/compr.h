@@ -23,6 +23,8 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs);
 
 int buscaMax(char* str, int from, int to, int* pos);
 
+int buscaMax2();
+
 int coinCar(char* str,int st1, int st2, int to);
 
 int compara(cola_t* cola, int e[2]);
