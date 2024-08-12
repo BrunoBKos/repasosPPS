@@ -58,7 +58,6 @@ void descomprime(FILE* in, FILE* out) {
     cola_t cola; /*cola para los longrep*/
     /*variables*/
     unsigned int tam = 0;
-    int e[2] = {0,0};
     int aux;
     int alert;
     /*inicializacion de las variables*/
