@@ -29,21 +29,23 @@ int compararl(FILE* r, FILE* l) {
     char ll[1024];
     int ok, tam1, tam2, res;
     res = 0;
-    ok = 0;
-    while(!ok) {
-        fprintf(stderr,"aqui");
+    ok = 1;
+    while(ok) {
         tam1 = fread(rl,1,1024,r);
         tam2 = fread(ll,1,1024,l);
-        ok = (tam1 != tam2); 
+        ok = (tam1 == tam2); 
         tam1 = (tam1 < tam2 ? tam1 : tam2);
         for(tam2 = 0; tam2 < tam1; tam2++) {
             if(rl[tam2] == ll[tam2]) {
                 res++;
             }
             else {
-                ok = 1;
+                ok = 0;
                 break;
             }
+        }
+        if(!tam1) {
+            break;
         }
     }
     return res;

@@ -47,8 +47,11 @@ void comprime(FILE* in, FILE* out) {
         cmpr.pos_lns += e[0];
         e[0] = 0;
     }
+    /*añado un finalizador*/
+    e[1] = 36864;
+    metedentroconlosbits(e,out,&cmpr,2,hs,map);
     /*cargado de los ultimos caracteres comprimidos*/
-    aux = (cmpr.pos_cmpr >> 3)%2048; 
+    aux = (cmpr.pos_cmpr >> 3)%2048;
     if(cmpr.pos_cmpr % 1024) 
         fwrite(&(cmpr.text_comp)[(aux>>10)<<10],1,(aux%1024)+1,out);
 }
@@ -85,8 +88,8 @@ void descomprime(FILE* in, FILE* out) {
     aux = (cmpr.pos_lns)%37888; 
     /*ultimo cargado de caracteres en el fichero en caso de no 
     haberse podido realizar con anterioridad*/
-    if(!(cmpr.pos_lns % 1024 == 0))
-        fwrite(&(cmpr.lineas)[((aux>>10)<<10)],1,(aux%1024)+1,out);
+    if(cmpr.pos_lns & 1023)
+        fwrite(&(cmpr.lineas)[((aux>>10)<<10)],1,(aux%1024),out);
 }
 
 /*funciones auxiliares*/
@@ -115,8 +118,8 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs, int hs[2
                 mask = mask >> 1;
             }
             cas[0] = 5;
-            map[aux] = hs[(unsigned int) baux];
-            hs[(unsigned int) baux] = aux;
+            map[aux] = hs[(unsigned char) baux];
+            hs[(unsigned char) baux] = aux;
             break;
         case 2: /*match: 10 + len + dist*/
             comprbytes[i>>3] += (128 >> (i%8));
@@ -129,8 +132,8 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs, int hs[2
             cas[0] = 5;
             aux = ((*cmpr).pos_lns)%37888;
             baux = ((*cmpr).lineas)[aux];
-            map[aux] = hs[(unsigned int) baux];
-            hs[(unsigned int) baux] = aux;
+            map[aux] = hs[(unsigned char) baux];
+            hs[(unsigned char) baux] = aux;
             i += 4;
             break;
         case 4: /*longrep[0]: 1101 + len*/
@@ -203,8 +206,8 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs, int hs[2
         mask = e[0];
         while(mask > 0) {
             baux = ((*cmpr).lineas)[aux];
-            map[aux] = hs[(unsigned int) baux];
-            hs[(unsigned int) baux] = aux;
+            map[aux] = hs[(unsigned char) baux];
+            hs[(unsigned char) baux] = aux;
             mask--;
             aux = (aux + 1)%37888;
         }
@@ -213,7 +216,7 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs, int hs[2
     cas[1] += (e[1] > 7);
     cas[1] += (e[1] > 39);
     cas[1] += (e[1] > 295);
-    cas[1] += (e[1] > 4392);
+    cas[1] += (e[1] > 4391);
 
     switch(cas[1]) {
         case 0: /*[0,7]*/ /*00 3bits*/
@@ -255,7 +258,7 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs, int hs[2
             break;
         case 4: /*[4393,35840]*/ /*111 15 bits*/
             mask = 16384;
-            aux = e[1] - 4393;
+            aux = e[1] - 4392;
             comprbytes[i>>3] += (128 >> (i%8));
             comprbytes[(i+1)>>3] += (128 >> ((i+1)%8));
             comprbytes[(i+2)>>3] += (128 >> ((i+2)%8));
@@ -400,7 +403,7 @@ void sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
                 cas[1] = 296;
                 break;
             case 3:/*15 bits*/
-                cas[1] = 4393;
+                cas[1] = 4392;
                 mask = 16384;
                 j--;
                 break;
@@ -410,6 +413,10 @@ void sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
             cas[1] += (mask * (0 != ((((*cmpr).text_comp)[(aux + (j >> 3))%2048]) & (128 >> (j%8)))));
             mask >>= 1;
             j++;
+        }
+        if(cas[1] > 35840) {
+            (*cmpr).pos_cmpr += 4096;
+            return;
         }
         /*la nueva distancia se encola*/
         enqueue(cola,cas[1]);
@@ -434,13 +441,14 @@ int buscaMax(char* str, int from, int to,int* pos, int hs[256], int map[37888]) 
     res[0] = 0;
     aux = ((to < 273) ? to : 273);
     aux3 = 0;
-    i = hs[(unsigned int) (str[from])];
+    i = hs[(unsigned char) (str[from])];
     aux2 = (((from - i) + 39936)%37888);
     if(i > 0 && aux2 <= 2048) {
         hs[(unsigned int) (str[from])] = -1;
         return 0;
     }
     while(i > 0 && aux2 > 2048) {
+        aux3 = aux2;
         aux2 = coinCar(str,from, i, aux);
         if(res[0] < aux2) {
             res[0] = aux2;
@@ -453,7 +461,6 @@ int buscaMax(char* str, int from, int to,int* pos, int hs[256], int map[37888]) 
             break;
         }
         i = map[i];
-        aux3 = aux2;
         aux2 = (((from - i) + 39936)%37888);
         if(aux3 >= aux2) {
             break;
