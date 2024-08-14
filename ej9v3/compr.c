@@ -8,7 +8,7 @@ void comprime(FILE* in, FILE* out) {
     int e[2] = {0,0}; /*len, dist*/
     unsigned int tam = 0; /*contador de los caracteres leidos del fichero*/
     int hs[257];
-    int map[37888];
+    int map[6144];
     /*variables adicionales*/
     int aux;
     unsigned int alert;
@@ -23,20 +23,22 @@ void comprime(FILE* in, FILE* out) {
     /*bucle principal*/
     while(cmpr.pos_lns < tam) {
         /*cuando se pasa un bloque de caracteres*/
-        if(alert != ((cmpr.pos_lns % 37888) >> 10)) {
+        if(alert != ((cmpr.pos_lns % 6144) >> 10)) {
             /*cargado del siguiente bloque de caracteres*/
-            tam += fread(&((cmpr.lineas)[((((cmpr.pos_lns>>10)+1)<<10)%37888)]),1,1024,in); 
-            alert = ((cmpr.pos_lns % 37888) >> 10);
+            tam += fread(&((cmpr.lineas)[((((cmpr.pos_lns>>10)+1)<<10)%6144)]),1,1024,in); 
+            alert = ((cmpr.pos_lns % 6144) >> 10);
         }
         /*se busca una coincidencia en las lineas anteriores*/
-        e[0] = buscaMax(cmpr.lineas,(cmpr.pos_lns%37888),(tam-cmpr.pos_lns),&(e[1]),hs,map);
+        e[0] = buscaMax(cmpr.lineas,(cmpr.pos_lns%6144),(tam-cmpr.pos_lns),&(e[1]),hs,map);
         /*se comprueba si es una posicion repetida*/
         aux = compara(&cola,e[1]);
         if(e[0] < 2) {
             if(aux != 4 || e[0] != 1) {
-                aux = 2;
+                aux = 1;
             }
-            aux--;
+            else {
+                aux = 3;
+            }
             e[0] = 1;
         }
         if(aux == 2) {
@@ -48,7 +50,7 @@ void comprime(FILE* in, FILE* out) {
         e[0] = 0;
     }
     /*añado un finalizador*/
-    e[1] = 36864;
+    e[1] = 4200;
     metedentroconlosbits(e,out,&cmpr,2,hs,map);
     /*cargado de los ultimos caracteres comprimidos*/
     aux = (cmpr.pos_cmpr >> 3)%2048;
@@ -71,12 +73,11 @@ void descomprime(FILE* in, FILE* out) {
     /*primera lectura del fichero*/
     tam += fread(cmpr.text_comp,1,1024,in);
     tam += fread(&((cmpr.text_comp)[tam]),1,1024,in);
-    alert = 0;
     while((cmpr.pos_cmpr>>3) < tam) {
         /*cargado de caracteres en el fichero en caso de haberse llenado un segmento*/
-        if((unsigned int) alert != ((cmpr.pos_lns % 37888) >> 10)) {
-            fwrite(&((cmpr.lineas)[(((((cmpr.pos_lns%37888)>>10)+36)<<10)%37888)]),1,1024,out); 
-            alert = ((cmpr.pos_lns % 37888) >> 10);
+        if((unsigned int) alert != ((cmpr.pos_lns % 6144) >> 10)) {
+            fwrite(&((cmpr.lineas)[(((((cmpr.pos_lns%6144)>>10)+5)<<10)%6144)]),1,1024,out); 
+            alert = ((cmpr.pos_lns % 6144) >> 10);
         }
         aux = (cmpr.pos_cmpr >> 13); /*divido entre 8*1024*/
         sacafueraconlosbits(&cmpr,&cola);/*inicio la descompresion*/
@@ -85,7 +86,7 @@ void descomprime(FILE* in, FILE* out) {
             tam += fread(&((cmpr.text_comp)[((((cmpr.pos_cmpr >> 13)+1)%2)<<10)]),1,1024,in);
         }
     }
-    aux = (cmpr.pos_lns)%37888; 
+    aux = (cmpr.pos_lns)%6144; 
     /*ultimo cargado de caracteres en el fichero en caso de no 
     haberse podido realizar con anterioridad*/
     if(cmpr.pos_lns & 1023)
@@ -94,7 +95,7 @@ void descomprime(FILE* in, FILE* out) {
 
 /*funciones auxiliares*/
 
-void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs, int hs[256], int map[37888]) {
+void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs, int hs[256], int map[6144]) {
     char comprbytes[6];
     char baux;
     unsigned int mask; 
@@ -110,7 +111,7 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs, int hs[2
     /*codigo comprimido*/
     switch(cs) {
         case 1: /*literal: 0 + byte*/
-            aux = ((*cmpr).pos_lns)%37888;
+            aux = ((*cmpr).pos_lns)%6144;
             baux = ((*cmpr).lineas)[aux];
             mask = 128;
             for(i += 1; mask > 0 ;i++) {
@@ -130,7 +131,7 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs, int hs[2
             comprbytes[i>>3] += (128 >> (i%8));
             comprbytes[(i+1)>>3] += (128 >> ((i+1)%8));
             cas[0] = 5;
-            aux = ((*cmpr).pos_lns)%37888;
+            aux = ((*cmpr).pos_lns)%6144;
             baux = ((*cmpr).lineas)[aux];
             map[aux] = hs[(unsigned char) baux];
             hs[(unsigned char) baux] = aux;
@@ -202,21 +203,20 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs, int hs[2
             break;
     }
     if (cas[0] < 3) {
-        aux = ((*cmpr).pos_lns)%37888;
+        aux = ((*cmpr).pos_lns)%6144;
         mask = e[0];
         while(mask > 0) {
             baux = ((*cmpr).lineas)[aux];
             map[aux] = hs[(unsigned char) baux];
             hs[(unsigned char) baux] = aux;
             mask--;
-            aux = (aux + 1)%37888;
+            aux = (aux + 1)%6144;
         }
     }
     /*dist*/
     cas[1] += (e[1] > 7);
     cas[1] += (e[1] > 39);
     cas[1] += (e[1] > 295);
-    cas[1] += (e[1] > 4391);
 
     switch(cas[1]) {
         case 0: /*[0,7]*/ /*00 3bits*/
@@ -245,25 +245,14 @@ void metedentroconlosbits(int e[2], FILE* out, cmprsor_t* cmpr, int cs, int hs[2
                 mask = mask >> 1;
             }
             break;
-        case 3: /*296,4392*/ /*110 12 bits*/
+        case 3: /*296,4096*/ /*11 12 bits*/
             mask = 2048;
             aux = e[1] - 296;
             comprbytes[i>>3] += (128 >> (i%8));
             comprbytes[(i+1)>>3] += (128 >> ((i+1)%8));
-            for(i += 3; mask > 0 ;i++) {
+            for(i += 2; mask > 0 ;i++) {
                 baux = (unsigned char) (((mask & aux) != 0)*(128>>(i%8)));
                 comprbytes[i>>3] += (unsigned char) baux;
-                mask = mask >> 1;
-            }
-            break;
-        case 4: /*[4393,35840]*/ /*111 15 bits*/
-            mask = 16384;
-            aux = e[1] - 4392;
-            comprbytes[i>>3] += (128 >> (i%8));
-            comprbytes[(i+1)>>3] += (128 >> ((i+1)%8));
-            comprbytes[(i+2)>>3] += (128 >> ((i+2)%8));
-            for(i += 3; mask > 0 ;i++) {
-                comprbytes[i>>3] += (((mask & aux) != 0) << (7 - (i%8)));
                 mask = mask >> 1;
             }
             break;
@@ -315,12 +304,12 @@ void sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
                 mask >>= 1;
             }
             (*cmpr).pos_cmpr = ((((*cmpr).pos_cmpr >> 3) << 3) + j);
-            ((*cmpr).lineas)[((*cmpr).pos_lns)%37888] = baux;
+            ((*cmpr).lineas)[((*cmpr).pos_lns)%6144] = baux;
             (*cmpr).pos_lns += 1;
             return;
         case 1: /*match*/
             break;
-        case 2: /*shortrep + longrep[0]*/
+        case 2: /*shortrep + longrep[0]*/ /*el problema esta aqui :)*/
             cas[1] = 1;
             if(!((((*cmpr).text_comp)[(aux + (j>>3))%2048] & (128 >> (j%8))))) {
                 cas[0] = 1;
@@ -371,13 +360,15 @@ void sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
             j++;
         }
     }
+
+    /*pendiente de rehacer ahora que los casos ocupan solo dos bits :*/
     /*dist*/
     if(cas[1] == 0) {
         i = j;
         /*calculo del caso*/
         while((((*cmpr).text_comp)[(aux + (j>>3))%2048] & (128 >> (j%8)))) {
             j++;
-            if((j-i) == 3) {
+            if((j-i) == 2) {
                 break;
             } 
         }
@@ -399,13 +390,9 @@ void sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
                 cas[1] = 40;
                 break;
             case 2:/*12 bits*/
+                j--;
                 mask = 2048;
                 cas[1] = 296;
-                break;
-            case 3:/*15 bits*/
-                cas[1] = 4392;
-                mask = 16384;
-                j--;
                 break;
         }
         /*calculo de la distancia*/
@@ -414,8 +401,8 @@ void sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
             mask >>= 1;
             j++;
         }
-        if(cas[1] > 35840) {
-            (*cmpr).pos_cmpr += 4096;
+        if(cas[1] > 4096) {
+            (*cmpr).pos_cmpr += 8192;
             return;
         }
         /*la nueva distancia se encola*/
@@ -429,20 +416,20 @@ void sacafueraconlosbits(cmprsor_t* cmpr, cola_t* cola) {
     (*cmpr).pos_cmpr = ((((*cmpr).pos_cmpr >> 3) << 3) + j);
     /*cargado de los caracteres descomprimidos en el buffer*/
     for(i = 0; ((int) i) < cas[0]; i++) {
-        ((*cmpr).lineas)[((*cmpr).pos_lns + i)%37888] = ((*cmpr).lineas)[((*cmpr).pos_lns + i - cas[1])%37888];
+        ((*cmpr).lineas)[((*cmpr).pos_lns + i)%6144] = ((*cmpr).lineas)[((*cmpr).pos_lns + i - cas[1])%6144];
     }
     /*actualizacion del contador de caracteres descomprimidos*/
     (*cmpr).pos_lns += i;
 }
 
-int buscaMax(char* str, int from, int to,int* pos, int hs[256], int map[37888]) {
+int buscaMax(char* str, int from, int to,int* pos, int hs[256], int map[6144]) {
     int i, aux, aux2, aux3;
     int res[2];
     res[0] = 0;
     aux = ((to < 273) ? to : 273);
     aux3 = 0;
-    i = hs[(unsigned char) (str[from])];
-    aux2 = (((from - i) + 39936)%37888);
+    i = hs[(unsigned char) (str[from])]; 
+    aux2 = (((from - i) + 8192)%6144);
     if(i > 0 && aux2 <= 2048) {
         hs[(unsigned char) (str[from])] = -1;
         return 0;
@@ -451,29 +438,32 @@ int buscaMax(char* str, int from, int to,int* pos, int hs[256], int map[37888]) 
         aux3 = aux2;
         aux2 = coinCar(str,from, i, aux);
         if(res[0] < aux2) {
-            res[0] = aux2;
-            res[1] = i;
-            if(res[0] == 273) {
-                break;
+            if(aux2 == 273) {
+                *pos = (((from - i) + 6144)%6144);
+                return aux2;
+            }
+            else if(aux2 != 2 || (((from - i) + 6144)%6144) < 295) {
+                res[0] = aux2;
+                res[1] = i;
             }
         }
         else if(!aux2) {
             break;
         }
         i = map[i];
-        aux2 = (((from - i) + 39936)%37888);
+        aux2 = (((from - i) + 8192)%6144);
         if(aux3 >= aux2) {
             break;
         }
     }
-    *pos = (((from - res[1]) + 37888)%37888);
+    *pos = (((from - res[1]) + 6144)%6144);
     return res[0];
 }
 
 int coinCar(char* str,int st1, int st2, int to) {
     int res;
     for(res = 0;res < to;res++) {
-        if(str[(res+st1)%37888] != str[(res+st2)%37888]) {
+        if(str[(res+st1)%6144] != str[(res+st2)%6144]) {
             break;
         }
     }
